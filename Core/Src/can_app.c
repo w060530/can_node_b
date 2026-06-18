@@ -25,10 +25,32 @@ sys_comm_status_t g_comm_status = {0};
   */
 int CAN_App_Init(void)
 {
-    /* 启动 CAN 外设（退出 INIT 状态，进入 NORMAL 模式） */
+    /* 启动 CAN 外设（退出 INIT 状态，进入 NORMAL/LOOPBACK 模式） */
     if (HAL_CAN_Start(&hcan) != HAL_OK)
     {
         return -1;  /* 启动失败，检查 CAN 时钟和引脚配置 */
+    }
+
+    /* 配置 CAN 硬件接收滤波器
+     * 关键：STM32F1 CAN 默认所有滤波器关闭 → 不配置则收不到任何帧！
+     * 此处配置一个滤波器组，接受所有标准帧（11-bit ID），放入 FIFO0 */
+    {
+        CAN_FilterTypeDef sFilterConfig;
+        sFilterConfig.FilterBank = 0;                    /* 使用滤波器组 0 */
+        sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK; /* 标识符掩码模式 */
+        sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;/* 32 位模式 */
+        sFilterConfig.FilterIdHigh = 0x0000;              /* ID 高 16 位：全 0 */
+        sFilterConfig.FilterIdLow = 0x0000;               /* ID 低 16 位：全 0 */
+        sFilterConfig.FilterMaskIdHigh = 0x0000;          /* 掩码高 16 位：0=不关心（全接受） */
+        sFilterConfig.FilterMaskIdLow = 0x0000;           /* 掩码低 16 位：0=不关心（全接受） */
+        sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0; /* 匹配的消息存入 FIFO0 */
+        sFilterConfig.FilterActivation = ENABLE;           /* 使能此滤波器 */
+        sFilterConfig.SlaveStartFilterBank = 14;           /* 主 CAN 用，从 CAN 起始 bank = 14 */
+
+        if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
+        {
+            return -3;  /* 滤波器配置失败 */
+        }
     }
 
     /* 使能 FIFO0 消息挂起中断通知

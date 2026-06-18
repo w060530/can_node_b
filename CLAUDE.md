@@ -419,6 +419,30 @@ typedef struct {
   - STM32F1 HAL 中通过 `CAN_TxHeaderTypeDef.IDE = CAN_ID_STD` 或 `CAN_ID_EXT` 切换
   - 本项目用标准帧（11-bit）即可满足 2 节点需求，但 ID 分配方案应预留扩展空间
 
+### 坑5：CAN 硬件滤波器未配置导致收不到任何帧
+- **日期**：2026-06-19（回环自测时发现）
+- **现象**：回环模式下 CAN 发送正常（`CAN_App_SendFrame` 返回成功），但 `CanRxTask` 永远收不到任何消息，LED 始终慢闪（对方离线状态），串口只有启动横幅
+- **原因**：STM32F1 CAN 外设有 14 个硬件滤波器组（Filter Bank）。`HAL_CAN_Init()` 不会自动配置滤波器——默认所有滤波器关闭，**所有接收到的消息都被硬件直接丢弃**，不进 FIFO、不触发中断。即使回环模式下 CAN 控制器内部 TX→RX 连通，帧经过滤波器时仍然被拦截
+- **解决方案**：在 `CAN_App_Init()` 的 `HAL_CAN_Start()` 之后、`HAL_CAN_ActivateNotification()` 之前，调用 `HAL_CAN_ConfigFilter()` 配置至少一个滤波器组。初期调试阶段建议**全通滤波器**（掩码全 0 = 接受所有帧）：
+  ```c
+  CAN_FilterTypeDef sFilterConfig;
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;  // 掩码=0 → 不关心 ID 位
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(&hcan, &sFilterConfig);
+  ```
+- **调试技巧**：这个问题很难从日志定位（发送成功、中断使能、队列创建都无报错），最有效的排查手段是：
+  1. 用调试器在 `HAL_CAN_RxFifo0MsgPendingCallback` 打断点 → 不触发 = 确认问题在硬件滤波层
+  2. 读取 CAN 寄存器 `CAN->RF0R`（FIFO0 状态寄存器）的 `FMP0` 位（bit1:0）→ 始终为 0 = 无消息进入 FIFO0
+- **波及**：所有 STM32F1 CAN 项目都需要显式配置滤波器
+
 ### 参考笔记：CAN 协议帧设计的核心知识（2026-06-09 讨论）
 
 #### 知识 1：序列号（Sequence Number）的四种作用
