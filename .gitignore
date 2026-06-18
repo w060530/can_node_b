@@ -1,0 +1,36 @@
+# STM32CubeMX CMake 项目 .gitignore
+
+# ---- 编译输出 ----
+build/
+Debug/
+Release/
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+*.d
+
+# ---- CMake 生成文件 ----
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+
+# ---- IDE / 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# ---- 操作系统杂项 ----
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# ---- 日志 ----
+*.log
