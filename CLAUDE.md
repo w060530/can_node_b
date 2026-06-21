@@ -1,7 +1,9 @@
 # CLAUDE.md — CAN 多节点通信项目（STM32F103C8T6 + FreeRTOS）
 
 > **项目名称**：can_node_b（CAN 总线多节点通信 Demo）
+> **版本**：🎉 V1.0（2026-06-21）双节点 CAN 通信成功！
 > 📖 理论知识笔记见 [CAN_LEARN.md](CAN_LEARN.md)
+> 🎤 面试准备文档见 [INTERVIEW.md](INTERVIEW.md)
 > **芯片**：STM32F103C8T6（Cortex-M3，64KB Flash，20KB SRAM）
 > **IDE/工具**：STM32CubeMX 生成骨架 + VSCode + CMake + ARM GCC
 > **CAN 收发器**：SN65HVD230（3.3V，最高 1Mbps）
