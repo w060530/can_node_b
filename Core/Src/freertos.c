@@ -153,6 +153,9 @@ __weak void CanTxTask1(void *argument)
     uint8_t data[8];
     uint8_t heartbeat_flags;
 
+    /* 发送前健康检查：防止节点独处时发送失败累积 → Bus-Off */
+    CAN_App_CheckAndRecoverBusOff();
+
     /* ---- 心跳帧：每 200ms 发送一次 ---- */
     {
       /* 组装本节点标志位：CAN 正常 + 检查对方是否在线 */

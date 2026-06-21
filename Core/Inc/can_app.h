@@ -36,6 +36,12 @@ extern sys_comm_status_t g_comm_status;
 int CAN_App_Init(void);
 
 /**
+  * @brief   检测 CAN 总线状态，Bus-Off 时自动恢复
+  * @retval  0=正常，-1=Bus-Off 已恢复，-2=恢复失败
+  */
+int CAN_App_CheckAndRecoverBusOff(void);
+
+/**
   * @brief   处理接收到的 CAN 消息（协议分发入口）
   * @param   msg    指向从队列取出的 CAN 消息
   * @retval  无

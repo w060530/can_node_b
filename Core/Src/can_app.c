@@ -76,6 +76,76 @@ int CAN_App_Init(void)
 }
 
 /**********************************************************
+ ***  CAN 总线错误检测与自动恢复
+ **********************************************************/
+
+/**
+  * @brief   检测 CAN 总线状态，Bus-Off 时自动恢复（停止→复位→重启→滤波器→中断）
+  * @retval  0=CAN 正常，-1=Bus-Off 已恢复，-2=恢复失败
+  * @note    调用时机：
+  *          - 每次 CanTxTask 发送前（预防性检查）
+  *          - CAN_App_SendFrame 发送失败后（响应式检查）
+  * @warning 调用 HAL_CAN_GetError 后需紧跟处理，错误标志需手动清零
+  */
+int CAN_App_CheckAndRecoverBusOff(void)
+{
+    uint32_t can_error;
+
+    /* 获取 CAN 错误状态（读取后需手动复位才能清零） */
+    can_error = HAL_CAN_GetError(&hcan);
+
+    /* ---- Bus-Off 恢复（TEC > 255，节点已离线）---- */
+    if (can_error & HAL_CAN_ERROR_BOF)
+    {
+        g_comm_status.bus_off_count++;  /* 记录 Bus-Off 事件 */
+
+        /* 停止 CAN（进入 INIT 模式） */
+        HAL_CAN_Stop(&hcan);
+
+        /* 复位所有错误计数器（TEC/REC 清零） */
+        HAL_CAN_ResetError(&hcan);
+
+        /* 等待总线空闲（确保 11 个隐性位已发送） */
+        HAL_Delay(1);
+
+        /* 重启 CAN（退出 INIT，进入 NORMAL 模式） */
+        if (HAL_CAN_Start(&hcan) != HAL_OK)
+        {
+            return -2;
+        }
+
+        /* 重新配置硬件滤波器（Stop/Start 后显式重配防丢失） */
+        {
+            CAN_FilterTypeDef sFilterConfig;
+            sFilterConfig.FilterBank = 0;
+            sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+            sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+            sFilterConfig.FilterIdHigh = 0x0000;
+            sFilterConfig.FilterIdLow = 0x0000;
+            sFilterConfig.FilterMaskIdHigh = 0x0000;
+            sFilterConfig.FilterMaskIdLow = 0x0000;
+            sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+            sFilterConfig.FilterActivation = ENABLE;
+            sFilterConfig.SlaveStartFilterBank = 14;
+            HAL_CAN_ConfigFilter(&hcan, &sFilterConfig);
+        }
+
+        /* 重新使能 FIFO0 消息挂起中断 */
+        HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+        return -1;  /* Bus-Off 已恢复 */
+    }
+
+    /* ---- Error Passive / Error Warning（错误计数偏高，主动清零防恶化）---- */
+    if (can_error & (HAL_CAN_ERROR_EPV | HAL_CAN_ERROR_EWG))
+    {
+        HAL_CAN_ResetError(&hcan);
+    }
+
+    return 0;  /* CAN 正常 */
+}
+
+/**********************************************************
  ***  帧发送封装
  **********************************************************/
 
@@ -103,6 +173,8 @@ int CAN_App_SendFrame(uint32_t std_id, const uint8_t *data, uint8_t dlc)
     if (HAL_CAN_AddTxMessage(&hcan, &tx_header, (uint8_t *)data, &tx_mailbox) != HAL_OK)
     {
         g_comm_status.tx_error_cnt++;
+        /* 发送失败 → 检查是否 Bus-Off，尝试自动恢复 */
+        CAN_App_CheckAndRecoverBusOff();
         return -1;
     }
 
