@@ -15,7 +15,23 @@
             }
         },
         {
+            "label": "擦除 Flash",
+            "type": "shell",
+            "command": "C:/Users/31261/AppData/Roaming/Python/Python310/Scripts/pyocd.exe",
+            "args": [
+                "erase",
+                "--chip",
+                "-t", "STM32F103RC"
+            ],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
             "label": "启动 pyOCD GDB Server",
+            "dependsOn": ["擦除 Flash"],
+            "dependsOrder": "sequence",
             "type": "shell",
             "command": "C:/Users/31261/AppData/Roaming/Python/Python310/Scripts/pyocd.exe",
             "args": [
