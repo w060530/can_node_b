@@ -42,6 +42,11 @@ int CAN_App_Init(void);
 int CAN_App_CheckAndRecoverBusOff(void);
 
 /**
+  * @brief   每隔 2 秒打印通信状态摘要（需在 CanTxTask 循环中调用）
+  */
+void CAN_App_PrintStatusIfDue(void);
+
+/**
   * @brief   处理接收到的 CAN 消息（协议分发入口）
   * @param   msg    指向从队列取出的 CAN 消息
   * @retval  无
