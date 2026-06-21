@@ -1,0 +1,46 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "清理残留 ST-LINK 进程",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-Command",
+                "Stop-Process -Name 'ST-LINK_gdbserver','stlinkserver' -Force -ErrorAction SilentlyContinue"
+            ],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "启动 pyOCD GDB Server",
+            "type": "shell",
+            "command": "C:/Users/31261/AppData/Roaming/Python/Python310/Scripts/pyocd.exe",
+            "args": [
+                "gdbserver",
+                "--port", "50000",
+                "--telnet-port", "50001",
+                "-t", "STM32F103RC"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "pyocd",
+                "pattern": {
+                    "regexp": "^.*$",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*$",
+                    "endsPattern": "GDB server listening on port"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

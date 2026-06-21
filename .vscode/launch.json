@@ -1,0 +1,44 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "name": "ST-LINK: STM32Cube GDB",
+            "origin": "snippet",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "清理残留 ST-LINK 进程",
+            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
+            "runEntry": "main",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${command:st-stm32-ide-debug-launch.get-projects-binary-from-context1}"
+                }
+            ]
+        },
+        {
+            "type": "cortex-debug",
+            "request": "launch",
+            "name": "PWLINK: Debug (自动)",
+            "servertype": "external",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/Debug/${workspaceFolderBasename}.elf",
+            "device": "STM32F103RC",
+            "gdbTarget": "localhost:50000",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "启动 pyOCD GDB Server",
+            "showDevDebugOutput": "none"
+        },
+        {
+            "type": "cortex-debug",
+            "request": "launch",
+            "name": "PWLINK: Debug (手动)",
+            "servertype": "external",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/Debug/${workspaceFolderBasename}.elf",
+            "device": "STM32F103RC",
+            "gdbTarget": "localhost:50000",
+            "runToEntryPoint": "main"
+        }
+    ]
+}
