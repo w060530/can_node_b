@@ -139,24 +139,11 @@ void CAN_App_ProcessRxMsg(const can_msg_t *msg)
     {
         case CAN_FRAME_HEARTBEAT:
         {
-            uint8_t flags = CAN_Protocol_GetHeartbeatFlags(msg->data);
-
-            /* 更新对方在线状态 */
+            /* 收到对方心跳帧 —— 仅记录接收时间
+             * 对方是否在线的判断权在 CanTxTask（基于超时）
+             * 此处不看对方帧内 PEER_ONLINE 标志，避免循环依赖 */
             g_comm_status.last_rx_tick = msg->timestamp;
             g_comm_status.rx_heartbeat_cnt++;
-
-            /* 判断对方是否在线 */
-            if (flags & HEARTBEAT_FLAG_PEER_ONLINE)
-            {
-                g_comm_status.peer_online = 1;
-                /* 更新本节点标志：对方在线 */
-                g_comm_status.local_state |= HEARTBEAT_FLAG_PEER_ONLINE;
-            }
-            else
-            {
-                g_comm_status.peer_online = 0;
-                g_comm_status.local_state &= ~HEARTBEAT_FLAG_PEER_ONLINE;
-            }
 
             /* 序列号连续性检查（丢帧检测） */
             {

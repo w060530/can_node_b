@@ -159,15 +159,18 @@ __weak void CanTxTask1(void *argument)
       heartbeat_flags  = HEARTBEAT_FLAG_CAN_OK;
       heartbeat_flags |= HEARTBEAT_FLAG_SENSOR_OK;  /* Demo 阶段传感器始终就绪 */
 
-      /* 根据心跳超时判定对方是否在线 */
+      /* 根据心跳超时判定对方是否在线
+       * 注意：这是唯一判断对方在线的地方，结果同步到 local_state 供 LedTask 读取 */
       if ((HAL_GetTick() - g_comm_status.last_rx_tick) < HEARTBEAT_TIMEOUT_MS)
       {
-        heartbeat_flags |= HEARTBEAT_FLAG_PEER_ONLINE;   /* 对方在线 */
+        heartbeat_flags |= HEARTBEAT_FLAG_PEER_ONLINE;   /* 告知对方：我收到了你的心跳 */
         g_comm_status.peer_online = 1;
+        g_comm_status.local_state |= HEARTBEAT_FLAG_PEER_ONLINE;   /* 同步本地状态 */
       }
       else
       {
-        g_comm_status.peer_online = 0;                   /* 对方离线 */
+        g_comm_status.peer_online = 0;
+        g_comm_status.local_state &= ~HEARTBEAT_FLAG_PEER_ONLINE;  /* 同步本地状态 */
       }
 
       /* 序列号 0~255 循环递增（uint8_t 自然溢出回绕） */
